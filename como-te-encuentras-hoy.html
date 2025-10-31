@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bienestar Emocional - Madre Matilde</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.1/chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+        }
+        .inside-out-bg {
+            background-color: #4a5568;
+            background-image: radial-gradient(circle at top right, #63b3ed, transparent), radial-gradient(circle at bottom left, #f6e05e, transparent);
+        }
+        .emotion-card, .context-btn {
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        }
+        .emotion-card:hover, .context-btn:hover {
+            transform: translateY(-5px) scale(1.03);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .keypad-btn {
+            transition: background-color 0.2s;
+        }
+        .keypad-btn:active {
+            background-color: #a0aec0;
+        }
+        .hidden {
+            display: none;
+        }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-1px, 0, 0); }
+            20%, 80% { transform: translate3d(2px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+            40%, 60% { transform: translate3d(4px, 0, 0); }
+        }
+        .animate-shake {
+            animation: shake 0.82s cubic-bezier(.36,.07,.19,.97) both;
+        }
+        .alert-border {
+            border: 3px solid #FBBF24; /* amber-400 */
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 antialiased">
+    <div id="app" class="min-h-screen flex flex-col items-center justify-center p-4">
+
+        <!-- Vista: Selección de Clase -->
+        <div id="class-selection-view" class="w-full max-w-4xl text-center">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-700 mb-2">Colegio "Madre Matilde"</h1>
+            <p class="text-lg md:text-xl mt-2 mb-8 text-gray-500">¿Cómo te sientes hoy? Primero, elige tu clase.</p>
+            <div id="class-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                <!-- Las clases se generan con JavaScript -->
+            </div>
+            <footer class="mt-8 text-center space-y-4">
+                 <div>
+                    <button id="admin-access-btn" class="text-sm text-gray-400 hover:text-blue-500 transition-colors">Acceso Profesorado</button>
+                </div>
+                <div class="text-sm text-gray-500">
+                  © 2025 Orestes González Villanueva — Desarrollado con Gemini ·
+                  <a href="mailto:ogonzalezv01@educarex.es?subject=Contacto%20App%20Gemini&body=Hola%20Orestes,"
+                     class="underline hover:text-gray-700">ogonzalezv01@educarex.es</a>
+                </div>
+            </footer>
+        </div>
+
+        <!-- Vista: Selección de Emoción -->
+        <div id="emotion-selection-view" class="hidden w-full max-w-4xl text-center inside-out-bg p-6 rounded-2xl shadow-2xl">
+            <h2 class="text-3xl font-bold text-white mb-1">Cuartel General de Emociones</h2>
+            <p id="emotion-class-title" class="text-lg text-blue-200 mb-6">Registrando para: </p>
+            <div id="emotion-grid" class="grid grid-cols-3 gap-4 md:gap-6">
+                <!-- Las emociones se generan con JavaScript -->
+            </div>
+            <div class="mt-8 flex justify-between items-center">
+                <button id="back-to-class-selection" class="bg-white/20 text-white font-semibold py-2 px-6 rounded-lg hover:bg-white/30 transition-colors">Volver</button>
+                <!-- Botón de Buzón de Desahogo (solo ESO) -->
+                <button id="open-desahogo-btn" class="hidden text-sm text-blue-200 hover:text-white underline transition-colors">
+                    ¿Prefieres escribirlo? (Anónimo)
+                </button>
+            </div>
+        </div>
+        
+        <!-- Vista: Buzón de Desahogo (NUEVA VISTA) -->
+        <div id="desahogo-view" class="hidden w-full max-w-lg text-center bg-white p-8 rounded-2xl shadow-xl">
+            <h2 class="text-2xl font-bold text-gray-700 mb-2">Buzón de Desahogo Anónimo</h2>
+            <p class="text-gray-600 mt-2 mb-6">Lo que escribas aquí se enviará a un profesor de forma anónima. Solo sabrán tu clase, no tu nombre. Úsalo si necesitas contar algo.</p>
+            <textarea id="desahogo-textarea" class="w-full h-40 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Escribe aquí lo que sientes o lo que te preocupa..."></textarea>
+            <div class="flex flex-col sm:flex-row gap-4 mt-6">
+                 <button id="back-from-desahogo" class="w-full bg-slate-400 text-white font-bold py-3 px-4 rounded-lg hover:bg-slate-500 transition">Volver</button>
+                 <button id="send-desahogo-btn" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition">Enviar Mensaje Anónimo</button>
+            </div>
+        </div>
+
+        <!-- Vista: Selección de Contexto (AHORA DINÁMICA) -->
+        <div id="context-selection-view" class="hidden w-full max-w-lg text-center bg-white p-8 rounded-2xl shadow-xl">
+             <h2 class="text-2xl font-bold text-gray-700 mb-2">¿Sobre qué es esta emoción?</h2>
+             <p id="context-emotion-name" class="text-lg text-gray-500 mb-8"></p>
+             <!-- Los botones de contexto se generan dinámicamente aquí -->
+             <div id="context-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                 <!-- Botones generados por JS -->
+             </div>
+             <button id="back-to-emotion-selection" class="mt-6 text-sm text-gray-500 hover:text-gray-700">Volver a elegir emoción</button>
+        </div>
+
+        <!-- Vista: Selección de Intensidad -->
+        <div id="intensity-selection-view" class="hidden w-full max-w-lg text-center bg-white p-8 rounded-2xl shadow-xl">
+             <h2 class="text-2xl font-bold text-gray-700 mb-2">¿Con qué intensidad?</h2>
+             <p id="intensity-emotion-name" class="text-lg text-gray-500 mb-8"></p>
+             <div class="flex justify-center space-x-4">
+                 <button data-intensity="1" class="intensity-btn bg-green-200 text-green-800 hover:bg-green-300 font-bold py-4 px-6 rounded-lg transition-transform hover:scale-105">Poca</button>
+                 <button data-intensity="2" class="intensity-btn bg-yellow-200 text-yellow-800 hover:bg-yellow-300 font-bold py-4 px-6 rounded-lg transition-transform hover:scale-105">Normal</button>
+                 <button data-intensity="3" class="intensity-btn bg-red-200 text-red-800 hover:bg-red-300 font-bold py-4 px-6 rounded-lg transition-transform hover:scale-105">Mucha</button>
+             </div>
+        </div>
+
+        <!-- Vista: Apoyo/Recurso -->
+        <div id="support-view" class="hidden w-full max-w-lg text-center bg-white p-8 rounded-2xl shadow-xl">
+            <h2 class="text-2xl font-bold text-gray-700 mb-2">Un momento para ti</h2>
+            <p class="text-gray-600 mt-2 mb-6">Recuerda que todas las emociones son válidas. Tómate un respiro si lo necesitas. Unas respiraciones profundas pueden ayudar mucho.</p>
+            <button id="close-support-btn" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition">Entendido</button>
+        </div>
+
+        <!-- Vista: Confirmación -->
+        <div id="confirmation-view" class="hidden text-center">
+            <div class="bg-white p-10 rounded-full shadow-2xl">
+                <svg class="w-24 h-24 text-green-500 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            </div>
+            <h2 class="text-3xl font-bold text-gray-700 mt-8">¡Gracias!</h2>
+            <p id="confirmation-message" class="text-lg text-gray-500 mt-2 mb-8">Tu emoción ha sido registrada.</p> <!-- Mensaje dinámico -->
+            <div class="flex flex-col sm:flex-row justify-center space-y-2 sm:space-y-0 sm:space-x-4 max-w-md mx-auto">
+                <button id="next-student-btn" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition">Siguiente Alumno</button>
+                <button id="finish-session-btn" class="w-full bg-slate-400 text-white font-bold py-3 px-4 rounded-lg hover:bg-slate-500 transition">Terminar y Salir</button>
+            </div>
+        </div>
+
+        <!-- Vista: Login de Admin -->
+        <div id="admin-login-view" class="hidden w-full max-w-sm bg-white p-8 rounded-2xl shadow-xl">
+             <h2 class="text-2xl font-bold text-center text-gray-700 mb-6">Acceso a Informes</h2>
+             <div id="pin-display" class="w-full bg-gray-100 rounded-lg h-14 mb-6 flex items-center justify-center text-3xl tracking-widest font-mono"></div>
+             <div class="grid grid-cols-3 gap-4">
+                 <!-- Teclado numérico generado con JS -->
+             </div>
+             <div class="flex justify-between mt-6">
+                <button id="pin-clear" class="w-full mr-2 bg-amber-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-amber-600 transition">Limpiar</button>
+                <button id="pin-back" class="w-full ml-2 bg-slate-400 text-white font-bold py-3 px-4 rounded-lg hover:bg-slate-500 transition">Volver</button>
+             </div>
+        </div>
+
+        <!-- Vista: Dashboard de Admin -->
+        <div id="admin-dashboard-view" class="hidden w-full max-w-7xl mx-auto p-4 md:p-8 bg-slate-50 rounded-2xl">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4">
+                <div>
+                    <h2 class="text-3xl font-bold text-slate-800">Panel de Bienestar Emocional</h2>
+                    <p class="text-slate-500 mt-1">Selecciona un rango de fechas para analizar las tendencias.</p>
+                </div>
+                 <div class="flex flex-col sm:flex-row items-center gap-2 mt-4 md:mt-0">
+                    <div class="flex items-center gap-2">
+                        <input type="date" id="date-start-filter" class="bg-white border-slate-300 rounded-lg shadow-sm focus:border-indigo-500 focus:ring-indigo-500 h-10">
+                        <span class="text-slate-500">a</span>
+                        <input type="date" id="date-end-filter" class="bg-white border-slate-300 rounded-lg shadow-sm focus:border-indigo-500 focus:ring-indigo-500 h-10">
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button id="export-pdf-btn" class="bg-white text-slate-700 font-semibold py-2 px-4 rounded-lg hover:bg-slate-100 transition border border-slate-300 shadow-sm flex items-center space-x-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                            <span>PDF</span>
+                        </button>
+                        <button id="reset-data-btn" class="bg-amber-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-amber-600 transition shadow-sm flex items-center space-x-2">
+                           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2
+0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        </button>
+                        <button id="dashboard-logout-btn" class="bg-red-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-600 transition shadow-sm flex items-center space-x-2">
+                           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- CONTENEDOR DE ALARMAS (NUEVO) -->
+            <div id="dashboard-alert-container" class="mb-6 space-y-4">
+                <div id="class-alert" class="hidden p-4 bg-amber-100 border-l-4 border-amber-500 text-amber-700 rounded-r-lg">
+                    <div class="flex">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                        <p class="font-bold">¡Atención! Se ha detectado un alto nivel de emociones negativas en una o más clases.</p>
+                    </div>
+                </div>
+                <div id="desahogo-alert" class="hidden p-4 bg-blue-100 border-l-4 border-blue-500 text-blue-700 rounded-r-lg">
+                     <div class="flex">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" /></svg>
+                        <p class="font-bold">¡Tienes nuevos mensajes anónimos sin leer en el Buzón de Desahogo!</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="dashboard-content" class="space-y-6">
+                <!-- Fila 1: Resumen y Tendencia -->
+                <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+                     <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-md border border-slate-200 flex flex-col">
+                        <h3 class="text-xl font-semibold mb-4 text-slate-700">Resumen General</h3>
+                        <div class="flex-grow flex items-center justify-center my-4 min-h-[250px]">
+                            <canvas id="overall-chart"></canvas>
+                        </div>
+                        <div class="mt-auto">
+                           <!-- Botón de IA eliminado -->
+                        </div>
+                    </div>
+                    <div class="lg:col-span-3 bg-white p-6 rounded-xl shadow-md border border-slate-200">
+                        <h3 class="text-xl font-semibold mb-4 text-slate-700">Tendencias Emocionales</h3>
+                        <div class="min-h-[300px]">
+                            <canvas id="trend-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                
+                 <!-- Fila 2: Resultado IA (ELIMINADA) -->
+
+                <!-- Fila 3: Desglose Clases y Contexto -->
+                <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                    <div class="bg-white p-6 rounded-xl shadow-md border border-slate-200">
+                        <h3 class="text-xl font-semibold mb-4 text-slate-700">Desglose por Etapas</h3>
+                        
+                        <!-- Contenedor principal para delegación de eventos -->
+                        <div id="etapas-container">
+                            
+                            <!-- Grid de 3 Columnas para Alumnos -->
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <!-- Columna Infantil -->
+                                <div>
+                                    <h4 class="text-lg font-semibold text-slate-600 mb-3 text-center border-b-2 border-pink-300 pb-1">Infantil</h4>
+                                    <div id="infantil-charts-container" class="space-y-4">
+                                        <!-- Gráficos de Infantil aquí -->
+                                    </div>
+                                </div>
+                                <!-- Columna Primaria (con borde izquierdo) -->
+                                <div class="md:border-l md:pl-4 md:border-slate-200">
+                                    <h4 class="text-lg font-semibold text-slate-600 mb-3 text-center border-b-2 border-blue-300 pb-1">Primaria</h4>
+                                    <div id="primaria-charts-container" class="space-y-4">
+                                        <!-- Gráficos de Primaria aquí -->
+                                    </div>
+                                </div>
+                                <!-- Columna ESO (con borde izquierdo) -->
+                                <div class="md:border-l md:pl-4 md:border-slate-200">
+                                    <h4 class="text-lg font-semibold text-slate-600 mb-3 text-center border-b-2 border-indigo-300 pb-1">E.S.O.</h4>
+                                    <div id="eso-charts-container" class="space-y-4">
+                                        <!-- Gráficos de ESO aquí -->
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Separador -->
+                            <hr class="my-6 border-slate-200">
+                            
+                            <!-- Sección Inferior Centrada para Profesores -->
+                            <div class="max-w-md mx-auto">
+                                <h4 class="text-lg font-semibold text-slate-600 mb-3 text-center border-b-2 border-slate-300 pb-1">Profesores</h4>
+                                <div id="profesores-charts-container" class="space-y-4">
+                                    <!-- Gráficos de Profesores aquí -->
+                                </div>
+                            </div>
+                            
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-md border border-slate-200">
+                        <h3 class="text-xl font-semibold mb-4 text-slate-700">Contexto de Emociones Negativas</h3>
+                        <p class="text-sm text-slate-500 -mt-2 mb-4">Muestra el origen de las emociones negativas y neutrales.</p>
+                        <div class="min-h-[300px]">
+                             <canvas id="context-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Fila 4: Buzón de Desahogo (NUEVA SECCIÓN) -->
+                <div class="bg-white p-6 rounded-xl shadow-md border border-slate-200">
+                    <h3 class="text-xl font-semibold mb-4 text-slate-700">Buzón de Desahogo</h3>
+                    <p class="text-sm text-slate-500 -mt-2 mb-4">Mensajes anónimos de E.S.O. (los más recientes primero).</p>
+                    <div id="desahogo-messages-container" class="space-y-4 max-h-96 overflow-y-auto pr-2">
+                        <!-- Mensajes generados por JS -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal de Confirmación para Poner a Cero -->
+    <div id="confirmation-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md text-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <h2 class="text-2xl font-bold text-gray-800 mt-4">¿Estás seguro?</h2>
+            <p class="text-gray-600 mt-2 mb-6">Esta acción eliminará permanentemente todos los registros de emociones. No se puede deshacer.</p>
+            <div class="flex flex-col sm:flex-row justify-center space-y-2 sm:space-y-0 sm:space-x-4">
+                <button id="cancel-reset-btn" class="w-full bg-slate-400 text-white font-bold py-3 px-4 rounded-lg hover:bg-slate-500 transition">Cancelar</button>
+                <button id="confirm-reset-btn" class="w-full bg-red-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-red-700 transition">Sí, Poner a Cero</button>
+            </div>
+        </div>
+    </div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, collection, addDoc, onSnapshot, query, setLogLevel, getDocs, deleteDoc, where, Timestamp, doc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        // --- CONFIGURACIÓN DE FIREBASE ---
+        let db, auth;
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        
+        try {
+            const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+            const app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+            setLogLevel('debug');
+
+            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                await signInWithCustomToken(auth, __initial_auth_token);
+            } else {
+                await signInAnonymously(auth);
+            }
+        } catch (error) {
+            console.error("Error inicializando Firebase:", error);
+            document.body.innerHTML = '<div class="text-red-500 text-center p-8">Error de configuración. La aplicación no puede iniciarse.</div>';
+            return;
+        }
+        
+        // --- COLECCIONES DE FIRESTORE ---
+        const emotionsCollectionPath = `artifacts/${appId}/public/data/emotions`;
+        const desahogoCollectionPath = `artifacts/${appId}/public/data/desahogo_messages`;
+
+        // --- ESTADO Y DATOS ---
+        const state = {
+            currentView: 'class-selection-view',
+            selectedClass: null,
+            selectedEmotion: null,
+            selectedContext: null,
+            pin: '',
+            charts: {},
+            allEmotionData: [],
+            allDesahogoData: [], // NUEVO: Para mensajes
+            classAlert: false, // NUEVO: Para alarma
+        };
+
+        const CORRECT_PIN = '2024';
+
+        const classes = [
+            "Infantil 3 años", "Infantil 4 años", "Infantil 5 años",
+            "1º Primaria", "2º Primaria", "3º Primaria", "4º Primaria", "5º Primaria", "6º Primaria",
+            "1º E.S.O.", "2º E.S.O.", "3º E.S.O.", "4º E.S.O.", "Profesores"
+        ];
+
+        const emotions = [
+            { name: 'Alegría', color: 'bg-yellow-400', emoji: '😄', type: 'positive' },
+            { name: 'Tristeza', color: 'bg-blue-500', emoji: '😢', type: 'negative' },
+            { name: 'Ira', color: 'bg-red-600', emoji: '😠', type: 'negative' },
+            { name: 'Miedo', color: 'bg-purple-600', emoji: '😨', type: 'negative' },
+            { name: 'Asco', color: 'bg-green-600', emoji: '🤢', type: 'negative' },
+            { name: 'Ansiedad', color: 'bg-orange-500', emoji: '😟', type: 'negative' },
+            { name: 'Aburrimiento', color: 'bg-gray-500', emoji: '😑', type: 'neutral' },
+            { name: 'Envidia', color: 'bg-pink-500', emoji: '😒', type: 'negative' },
+            { name: 'Vergüenza', color: 'bg-indigo-500', emoji: '😳', type: 'negative' }
+        ];
+        
+        const contexts_general = [
+            { name: 'Clase / Tareas', icon: '📚', color: 'bg-blue-100 text-blue-800' },
+            { name: 'Amigos / Compañeros', icon: '🧑‍🤝‍🧑', color: 'bg-green-100 text-green-800' },
+            { name: 'Familia / Casa', icon: '🏠', color: 'bg-purple-100 text-purple-800' },
+            { name: 'Yo mismo/a', icon: '👤', color: 'bg-yellow-100 text-yellow-800' },
+            { name: 'No lo sé', icon: '❓', color: 'bg-gray-100 text-gray-800' }
+        ];
+        
+        const contexts_eso = [
+            { name: 'Exámenes / Notas', icon: '📄', color: 'bg-red-100 text-red-800' },
+            { name: 'Redes Sociales', icon: '📱', color: 'bg-cyan-100 text-cyan-800' },
+            { name: 'Amistades / Compañeros', icon: '🧑‍🤝‍🧑', color: 'bg-green-100 text-green-800' },
+            { name: 'Mi Imagen / Autoestima', icon: '👤', color: 'bg-yellow-100 text-yellow-800' },
+            { name: 'Familia / Casa', icon: '🏠', color: 'bg-purple-100 text-purple-800' },
+            { name: 'El Futuro', icon: '🧭', color: 'bg-orange-100 text-orange-800' },
+            { name: 'No lo sé', icon: '❓', color: 'bg-gray-100 text-gray-800' }
+        ];
+        
+        const allContextNames = [ 'Clase / Tareas', 'Yo mismo/a', 'Exámenes / Notas', 'Redes Sociales', 'Mi Imagen / Autoestima', 'El Futuro', 'Amigos / Compañeros', 'Familia / Casa', 'No lo sé' ];
+        
+        const contextColorMap = {
+            'Clase / Tareas': '#3B82F6', 'Yo mismo/a': '#F59E0B', 'Exámenes / Notas': '#DC2626', 'Redes Sociales': '#06B6D4', 
+            'Mi Imagen / Autoestima': '#F59E0B', 'El Futuro': '#F97316', 'Amigos / Compañeros': '#10B981', 'Familia / Casa': '#8B5CF6', 'No lo sé': '#6B7280'
+        };
+
+        // --- ELEMENTOS DEL DOM ---
+        const views = {
+            classSelection: document.getElementById('class-selection-view'),
+            emotionSelection: document.getElementById('emotion-selection-view'),
+            desahogo: document.getElementById('desahogo-view'), // NUEVO
+            contextSelection: document.getElementById('context-selection-view'),
+            intensitySelection: document.getElementById('intensity-selection-view'),
+            support: document.getElementById('support-view'),
+            confirmation: document.getElementById('confirmation-view'),
+            adminLogin: document.getElementById('admin-login-view'),
+            adminDashboard: document.getElementById('admin-dashboard-view')
+        };
+        
+        const dateStartFilter = document.getElementById('date-start-filter');
+        const dateEndFilter = document.getElementById('date-end-filter');
+        // Referencias a elementos de IA eliminadas
+        const confirmationModal = document.getElementById('confirmation-modal');
+        const confirmResetBtn = document.getElementById('confirm-reset-btn');
+        const confirmationMessage = document.getElementById('confirmation-message');
+        const openDesahogoBtn = document.getElementById('open-desahogo-btn');
+        const desahogoTextarea = document.getElementById('desahogo-textarea');
+        const sendDesahogoBtn = document.getElementById('send-desahogo-btn');
+        const classAlert = document.getElementById('class-alert');
+        const desahogoAlert = document.getElementById('desahogo-alert');
+        const desahogoMessagesContainer = document.getElementById('desahogo-messages-container');
+
+        // --- FUNCIONES ---
+        const switchView = (viewId) => {
+            Object.values(views).forEach(view => view.classList.add('hidden'));
+            if (views[viewId]) {
+                views[viewId].classList.remove('hidden');
+            }
+            state.currentView = viewId;
+        };
+        
+        const speak = (text) => {
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'es-ES';
+                speechSynthesis.speak(utterance);
+            }
+        };
+        
+        const initClassSelection = () => {
+            const classGrid = document.getElementById('class-grid');
+            classGrid.innerHTML = '';
+            const colors = ['bg-blue-500', 'bg-indigo-500', 'bg-purple-500', 'bg-pink-500', 'bg-red-500', 'bg-orange-500', 'bg-amber-500', 'bg-green-500', 'bg-teal-500', 'bg-cyan-500'];
+            classes.forEach((cls, i) => {
+                const btn = document.createElement('button');
+                btn.className = `p-4 ${colors[i % colors.length]} hover:${colors[i % colors.length].replace('500', '600')} text-white rounded-lg shadow-md hover:shadow-xl transition-all duration-300 font-semibold`;
+                btn.textContent = cls;
+                btn.addEventListener('click', () => handleClassSelection(cls));
+                classGrid.appendChild(btn);
+            });
+        };
+
+        const initEmotionSelection = () => {
+            const emotionGrid = document.getElementById('emotion-grid');
+            emotionGrid.innerHTML = '';
+            emotions.forEach(emotion => {
+                const card = document.createElement('div');
+                card.className = `emotion-card ${emotion.color} text-white p-4 rounded-lg flex flex-col items-center justify-center aspect-square cursor-pointer relative`;
+                card.innerHTML = `<span class="text-5xl">${emotion.emoji}</span><span class="font-bold mt-2 text-sm md:text-base">${emotion.name}</span><button class="speaker-btn absolute top-2 right-2 bg-black/20 p-1 rounded-full hover:bg-black/40"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg></button>`;
+                card.querySelector('.speaker-btn').addEventListener('click', (e) => { e.stopPropagation(); speak(emotion.name); });
+                card.addEventListener('click', () => handleEmotionSelection(emotion));
+                emotionGrid.appendChild(card);
+            });
+        };
+
+        const initAdminLogin = () => {
+            const keypadContainer = views.adminLogin.querySelector('.grid');
+            keypadContainer.innerHTML = '';
+            [1, 2, 3, 4, 5, 6, 7, 8, 9, '', 0, 'del'].forEach(key => {
+                const btn = document.createElement('button');
+                btn.className = `keypad-btn bg-gray-200 text-2xl font-bold rounded-lg h-16 flex items-center justify-center ${key === '' ? 'bg-transparent' : ''}`;
+                if (key !== '') {
+                    btn.textContent = key === 'del' ? '<' : key;
+                    btn.addEventListener('click', () => handlePinInput(key));
+                }
+                keypadContainer.appendChild(btn);
+            });
+        };
+        
+        const renderContextView = () => {
+            const contextGrid = document.getElementById('context-grid');
+            contextGrid.innerHTML = '';
+            
+            const isEso = state.selectedClass.includes('E.S.O.');
+            const contextsToRender = isEso ? contexts_eso : contexts_general;
+            
+            contextsToRender.forEach((context, i) => {
+                const btn = document.createElement('button');
+                btn.dataset.context = context.name;
+                btn.className = `context-btn ${context.color} p-4 rounded-lg font-semibold flex items-center justify-center space-x-2`;
+                if (i === contextsToRender.length - 1 && contextsToRender.length % 2 !== 0) {
+                    btn.classList.add('sm:col-span-2');
+                }
+                btn.innerHTML = `<span class="text-2xl">${context.icon}</span><span>${context.name}</span>`;
+                btn.addEventListener('click', (e) => handleContextSelection(e.currentTarget.dataset.context));
+                contextGrid.appendChild(btn);
+            });
+        };
+        
+        // NUEVA: Muestra/oculta el botón del buzón
+        const updateDesahogoButtonVisibility = () => {
+            if (state.selectedClass && state.selectedClass.includes('E.S.O.')) {
+                openDesahogoBtn.classList.remove('hidden');
+            } else {
+                openDesahogoBtn.classList.add('hidden');
+            }
+        };
+
+        const handleClassSelection = (className) => {
+            state.selectedClass = className;
+            document.getElementById('emotion-class-title').textContent = `Registrando para: ${className}`;
+            updateDesahogoButtonVisibility(); // <-- NUEVA LLAMADA
+            switchView('emotionSelection');
+        };
+
+        const handleEmotionSelection = (emotion) => {
+            state.selectedEmotion = emotion;
+            if (emotion.type === 'negative' || emotion.type === 'neutral') {
+                document.getElementById('context-emotion-name').textContent = `Sobre tu ${emotion.name.toLowerCase()}...`;
+                renderContextView();
+                switchView('contextSelection');
+            } else {
+                state.selectedContext = null;
+                document.getElementById('intensity-emotion-name').textContent = emotion.name;
+                switchView('intensitySelection');
+            }
+        };
+
+        const handleContextSelection = (context) => {
+            state.selectedContext = context;
+            document.getElementById('intensity-emotion-name').textContent = state.selectedEmotion.name;
+            switchView('intensitySelection');
+        };
+
+        const handleIntensitySelection = async (intensity) => {
+            try {
+                await addDoc(collection(db, emotionsCollectionPath), {
+                    class: state.selectedClass,
+                    emotion: state.selectedEmotion.name,
+                    intensity: intensity,
+                    context: state.selectedContext,
+                    timestamp: new Date().toISOString()
+                });
+
+                confirmationMessage.textContent = 'Tu emoción ha sido registrada.';
+                if (state.selectedEmotion.type === 'negative') {
+                    switchView('support');
+                } else {
+                    switchView('confirmation');
+                }
+            } catch (error) {
+                console.error("Error al guardar la emoción:", error);
+            }
+        };
+        
+        // NUEVA: Maneja el envío del buzón
+        const handleSendDesahogo = async () => {
+            const message = desahogoTextarea.value.trim();
+            if (message.length < 5) {
+                alert("Por favor, escribe un mensaje un poco más largo.");
+                return;
+            }
+            
+            sendDesahogoBtn.disabled = true;
+            sendDesahogoBtn.innerHTML = '<div class="loader mx-auto" style="width:24px; height:24px; border-width: 3px;"></div>';
+            
+            try {
+                await addDoc(collection(db, desahogoCollectionPath), {
+                    class: state.selectedClass,
+                    message: message,
+                    timestamp: new Date().toISOString(),
+                    read: false
+                });
+                
+                desahogoTextarea.value = '';
+                confirmationMessage.textContent = 'Tu mensaje anónimo ha sido enviado.';
+                switchView('confirmation');
+
+            } catch (error) {
+                console.error("Error al guardar el mensaje de desahogo:", error);
+                alert("Hubo un error al enviar tu mensaje. Inténtalo de nuevo.");
+            } finally {
+                sendDesahogoBtn.disabled = false;
+                sendDesahogoBtn.textContent = 'Enviar Mensaje Anónimo';
+            }
+        };
+
+        const handlePinInput = (key) => {
+            if (key === 'del') state.pin = state.pin.slice(0, -1);
+            else if (state.pin.length < 4) state.pin += key;
+            
+            const pinDisplay = document.getElementById('pin-display');
+            pinDisplay.textContent = '•'.repeat(state.pin.length);
+            
+            if (state.pin.length === 4) {
+                if (state.pin === CORRECT_PIN) {
+                    setTimeout(() => { initDashboard(); switchView('adminDashboard'); state.pin = ''; pinDisplay.textContent = ''; }, 200);
+                } else {
+                    pinDisplay.classList.add('animate-shake', 'text-red-500');
+                    pinDisplay.textContent = "Error";
+                    setTimeout(() => { pinDisplay.classList.remove('animate-shake', 'text-red-500'); state.pin = ''; pinDisplay.textContent = ''; }, 1000);
+                }
+            }
+        };
+        
+        const initDashboard = () => {
+            const today = new Date();
+            const sevenDaysAgo = new Date();
+            sevenDaysAgo.setDate(today.getDate() - 6);
+            dateStartFilter.valueAsDate = sevenDaysAgo;
+            dateEndFilter.valueAsDate = today;
+            renderDashboard();
+        };
+        
+        const getFilteredData = () => {
+            const startDate = new Date(dateStartFilter.value);
+            startDate.setHours(0, 0, 0, 0);
+            const endDate = new Date(dateEndFilter.value);
+            endDate.setHours(23, 59, 59, 999);
+            
+            const filterFn = (d) => {
+                const timestamp = new Date(d.timestamp);
+                return timestamp >= startDate && timestamp <= endDate;
+            };
+            
+            return {
+                emotions: state.allEmotionData.filter(filterFn),
+                desahogo: state.allDesahogoData.filter(filterFn)
+            };
+        };
+
+        const renderDashboard = () => {
+            state.classAlert = false; // Resetea la alarma de clase
+            const { emotions, desahogo } = getFilteredData();
+            // Líneas de reseteo de IA eliminadas
+
+            renderOverallChart(emotions);
+            renderTrendChart(emotions);
+            renderClassCharts(emotions); // Esta función puede activar state.classAlert
+            renderContextChart(emotions);
+            renderDesahogoMessages(desahogo); // NUEVA
+            
+            updateDashboardAlerts(desahogo); // NUEVA (comprueba todas las alarmas)
+        };
+        
+        // NUEVA: Muestra las alarmas
+        const updateDashboardAlerts = (filteredDesahogoData) => {
+            // Alarma 1: Alto nivel de emociones negativas
+            if (state.classAlert) {
+                classAlert.classList.remove('hidden');
+            } else {
+                classAlert.classList.add('hidden');
+            }
+            
+            // Alarma 2: Nuevos mensajes de desahogo
+            const hasUnread = filteredDesahogoData.some(msg => !msg.read);
+            if (hasUnread) {
+                desahogoAlert.classList.remove('hidden');
+            } else {
+                desahogoAlert.classList.add('hidden');
+            }
+        };
+
+        const getAggregatedData = (data, groupBy = null) => {
+            const result = {};
+            const itemsToProcess = groupBy ? [...new Set(data.map(d => d[groupBy]))].sort() : ['overall'];
+            itemsToProcess.forEach(item => {
+                const dataSubset = groupBy ? data.filter(d => d[groupBy] === item) : data;
+                const emotionCounts = emotions.reduce((acc, emotion) => ({ ...acc, [emotion.name]: 0 }), {});
+                dataSubset.forEach(record => {
+                    if (emotionCounts.hasOwnProperty(record.emotion)) {
+                        emotionCounts[record.emotion]++;
+                    }
+                });
+                result[item] = emotionCounts;
+            });
+            return result;
+        };
+        
+        const chartColorMap = emotions.reduce((acc, e) => {
+             const colorMap = { 'bg-yellow-400': '#FBBF24', 'bg-blue-500': '#3B82F6', 'bg-red-600': '#DC2626', 'bg-purple-600': '#9333EA', 'bg-green-600': '#16A34A', 'bg-orange-500': '#F97316', 'bg-gray-500': '#6B7280', 'bg-pink-500': '#EC4899', 'bg-indigo-500': '#6366F1' };
+             acc[e.name] = colorMap[e.color];
+             return acc;
+        }, {});
+
+        const renderOverallChart = (data) => {
+            const aggregated = getAggregatedData(data)['overall'];
+            const ctx = document.getElementById('overall-chart').getContext('2d');
+            if (state.charts.overall) state.charts.overall.destroy();
+            state.charts.overall = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(aggregated),
+                    datasets: [{ data: Object.values(aggregated), backgroundColor: Object.keys(aggregated).map(name => chartColorMap[name]) }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' } } }
+            });
+        };
+        
+        const renderTrendChart = (data) => {
+            const ctx = document.getElementById('trend-chart').getContext('2d');
+            const dataByDay = {};
+            const startDate = new Date(dateStartFilter.value);
+            const endDate = new Date(dateEndFilter.value);
+            
+            for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+                dataByDay[d.toISOString().split('T')[0]] = emotions.reduce((acc, e) => ({ ...acc, [e.name]: 0 }), {});
+            }
+            
+            data.forEach(d => {
+                const day = new Date(d.timestamp).toISOString().split('T')[0];
+                if (dataByDay[day]) dataByDay[day][d.emotion]++;
+            });
+
+            const labels = Object.keys(dataByDay).map(d => new Date(d).toLocaleDateString('es-ES', {month: 'short', day: 'numeric'}));
+            const datasets = emotions.map(e => ({
+                label: e.name,
+                data: Object.values(dataByDay).map(dayData => dayData[e.name]),
+                borderColor: chartColorMap[e.name],
+                backgroundColor: chartColorMap[e.name] + '33',
+                tension: 0.1,
+                fill: true,
+            }));
+
+            if (state.charts.trend) state.charts.trend.destroy();
+            state.charts.trend = new Chart(ctx, {
+                type: 'line',
+                data: { labels, datasets },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'bottom' } }, scales: { y: { beginAtZero: true } } }
+            });
+        };
+        
+        // MODIFICADA: Ahora activa la alarma y clasifica por etapas
+        const renderClassCharts = (data) => {
+            const infantilContainer = document.getElementById('infantil-charts-container');
+            const primariaContainer = document.getElementById('primaria-charts-container');
+            const esoContainer = document.getElementById('eso-charts-container');
+            const profesoresContainer = document.getElementById('profesores-charts-container');
+            
+            infantilContainer.innerHTML = '';
+            primariaContainer.innerHTML = '';
+            esoContainer.innerHTML = '';
+            profesoresContainer.innerHTML = '';
+
+            const aggregated = getAggregatedData(data, 'class');
+            
+            Object.keys(aggregated).forEach(className => {
+                const classData = aggregated[className];
+                const totalVotes = Object.values(classData).reduce((a, b) => a + b, 0);
+                if (totalVotes === 0) return;
+
+                const card = document.createElement('div');
+                let alertClass = '';
+                const negativeEmotions = emotions.filter(e => e.type === 'negative').map(e => e.name);
+                const negativeCount = Object.entries(classData).filter(([e, c]) => negativeEmotions.includes(e)).reduce((sum, [,c]) => sum + c, 0);
+                
+                // Activa la alarma si se supera el umbral
+                if (totalVotes > 0 && (negativeCount / totalVotes) > 0.3) { // 30% threshold
+                    alertClass = 'alert-border';
+                    state.classAlert = true; // <-- ACTIVADOR DE ALARMA
+                }
+
+                card.className = `bg-slate-50 p-4 rounded-lg border border-slate-200 ${alertClass}`;
+                card.innerHTML = `
+                    <div class="flex justify-between items-center mb-2">
+                        <h4 class="font-semibold text-slate-600">${className}</h4>
+                        <!-- Botón de IA por clase eliminado -->
+                    </div>
+                    <canvas></canvas>
+                `;
+                
+                // --- NUEVA LÓGICA DE CLASIFICACIÓN (4 contenedores) ---
+                let targetContainer;
+                if (className.includes('Infantil')) {
+                    targetContainer = infantilContainer;
+                } else if (className.includes('Primaria')) {
+                    targetContainer = primariaContainer;
+                } else if (className.includes('E.S.O.')) {
+                    targetContainer = esoContainer;
+                } else if (className.includes('Profesores')) {
+                    targetContainer = profesoresContainer;
+                } else {
+                    targetContainer = primariaContainer; // Fallback
+                }
+                targetContainer.appendChild(card);
+                
+                new Chart(card.querySelector('canvas').getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: Object.keys(classData),
+                        datasets: [{ data: Object.values(classData), backgroundColor: Object.keys(classData).map(name => chartColorMap[name]) }]
+                    },
+                    options: { indexAxis: 'y', responsive: true, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+                });
+            });
+
+            // --- NUEVO: Añadir placeholders si no hay datos ---
+            const placeholder = '<p class="text-xs text-center text-slate-400 p-4">No hay datos para esta etapa en las fechas seleccionadas.</p>';
+            if (infantilContainer.innerHTML === '') {
+                infantilContainer.innerHTML = placeholder;
+            }
+            if (primariaContainer.innerHTML === '') {
+                primariaContainer.innerHTML = placeholder;
+            }
+            if (esoContainer.innerHTML === '') {
+                esoContainer.innerHTML = placeholder;
+            }
+            if (profesoresContainer.innerHTML === '') {
+                profesoresContainer.innerHTML = placeholder;
+            }
+        };
+        
+        const renderContextChart = (data) => {
+            const emotionMap = emotions.reduce((acc, e) => ({...acc, [e.name]: e.type}), {});
+            const negativeData = data.filter(d => emotionMap[d.emotion] === 'negative' || emotionMap[d.emotion] === 'neutral');
+            
+            const contextCounts = allContextNames.reduce((acc, c) => ({ ...acc, [c]: 0 }), {});
+            negativeData.forEach(d => {
+                if (contextCounts.hasOwnProperty(d.context)) { contextCounts[d.context]++; }
+            });
+
+            const ctx = document.getElementById('context-chart').getContext('2d');
+            if (state.charts.context) state.charts.context.destroy();
+            
+            state.charts.context = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: allContextNames,
+                    datasets: [{ label: 'Nº de Registros', data: allContextNames.map(name => contextCounts[name]), backgroundColor: allContextNames.map(name => contextColorMap[name]) }]
+                },
+                options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+            });
+        };
+        
+        // NUEVA: Renderiza los mensajes del buzón
+        const renderDesahogoMessages = (data) => {
+            desahogoMessagesContainer.innerHTML = '';
+            if (data.length === 0) {
+                desahogoMessagesContainer.innerHTML = '<p class="text-slate-500 text-center">No hay mensajes en este rango de fechas.</p>';
+                return;
+            }
+            
+            // Ordenar por más reciente primero
+            const sortedData = data.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+            
+            sortedData.forEach(msg => {
+                const card = document.createElement('div');
+                const isUnread = !msg.read;
+                const timestamp = new Date(msg.timestamp).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' });
+                
+                card.className = `p-4 border rounded-lg ${isUnread ? 'bg-white shadow' : 'bg-slate-50 border-slate-200 opacity-70'}`;
+                card.innerHTML = `
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="font-bold text-slate-700">${msg.class}</span>
+                        <span class="text-sm text-slate-500">${timestamp}</span>
+                    </div>
+                    <p class="text-slate-600 whitespace-pre-wrap">${msg.message}</p>
+                    ${isUnread ? `<button data-id="${msg.id}" class="mark-read-btn mt-3 bg-blue-100 text-blue-700 text-xs font-bold py-1 px-3 rounded-full hover:bg-blue-200">Marcar como leído</button>` : ''}
+                `;
+                desahogoMessagesContainer.appendChild(card);
+            });
+        };
+        
+        // NUEVA: Marca un mensaje como leído
+        const handleMarkAsRead = async (docId, btn) => {
+            btn.disabled = true;
+            btn.textContent = 'Marcando...';
+            try {
+                const docRef = doc(db, desahogoCollectionPath, docId);
+                await updateDoc(docRef, { read: true });
+                // El onSnapshot se encargará de re-renderizar
+            } catch (error) {
+                console.error("Error al marcar como leído:", error);
+                btn.disabled = false;
+                btn.textContent = 'Marcar como leído';
+            }
+        };
+
+        // --- Función handleAiAnalysis ELIMINADA ---
+
+        const exportToPdf = () => {
+            const dashboardContent = document.getElementById('dashboard-content');
+            const { jsPDF } = window.jspdf;
+            html2canvas(dashboardContent, { scale: 2 }).then(canvas => {
+                const imgData = canvas.toDataURL('image/png');
+                const pdf = new jsPDF({ orientation: 'landscape', unit: 'pt', format: [canvas.width, canvas.height] });
+                pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+                pdf.save(`informe-bienestar-${dateStartFilter.value}-a-${dateEndFilter.value}.pdf`);
+            });
+        };
+
+        const resetDatabase = async () => {
+            confirmResetBtn.innerHTML = '<div class="loader mx-auto" style="width:24px; height:24px; border-width: 3px;"></div>';
+            confirmResetBtn.disabled = true;
+            try {
+                // Borrar emociones
+                const emotionsCol = collection(db, emotionsCollectionPath);
+                const emotionsSnapshot = await getDocs(emotionsCol);
+                await Promise.all(emotionsSnapshot.docs.map(d => deleteDoc(d.ref)));
+                
+                // Borrar mensajes de desahogo
+                const desahogoCol = collection(db, desahogoCollectionPath);
+                const desahogoSnapshot = await getDocs(desahogoCol);
+                await Promise.all(desahogoSnapshot.docs.map(d => deleteDoc(d.ref)));
+
+            } catch (error) {
+                console.error("Error al resetear la base de datos:", error);
+            } finally {
+                confirmResetBtn.innerHTML = 'Sí, Poner a Cero';
+                confirmResetBtn.disabled = false;
+                confirmationModal.classList.add('hidden');
+            }
+        };
+
+        // --- LISTENERS ---
+        
+        // Listener para Emociones
+        onSnapshot(query(collection(db, emotionsCollectionPath)), (snapshot) => {
+            state.allEmotionData = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+            if (state.currentView === 'adminDashboard') {
+                renderDashboard();
+            }
+        });
+        
+        // NUEVO Listener para Buzón de Desahogo
+        onSnapshot(query(collection(db, desahogoCollectionPath)), (snapshot) => {
+            state.allDesahogoData = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+            if (state.currentView === 'adminDashboard') {
+                renderDashboard();
+            }
+        });
+
+        document.getElementById('admin-access-btn').addEventListener('click', () => switchView('adminLogin'));
+        document.getElementById('back-to-class-selection').addEventListener('click', () => switchView('classSelection'));
+        document.getElementById('pin-clear').addEventListener('click', () => { state.pin = ''; document.getElementById('pin-display').textContent = ''; });
+        document.getElementById('pin-back').addEventListener('click', () => switchView('classSelection'));
+        document.getElementById('dashboard-logout-btn').addEventListener('click', () => switchView('classSelection'));
+        document.getElementById('close-support-btn').addEventListener('click', () => switchView('confirmation'));
+        document.getElementById('next-student-btn').addEventListener('click', () => switchView('emotionSelection'));
+        document.getElementById('finish-session-btn').addEventListener('click', () => { state.selectedClass = null; switchView('classSelection'); });
+        [dateStartFilter, dateEndFilter].forEach(el => el.addEventListener('change', renderDashboard));
+        // Listener de botón de IA eliminado
+        document.getElementById('export-pdf-btn').addEventListener('click', exportToPdf);
+        document.getElementById('reset-data-btn').addEventListener('click', () => confirmationModal.classList.remove('hidden'));
+        document.getElementById('cancel-reset-btn').addEventListener('click', () => confirmationModal.classList.add('hidden'));
+        document.getElementById('confirm-reset-btn').addEventListener('click', resetDatabase);
+        views.intensitySelection.querySelectorAll('.intensity-btn').forEach(btn => btn.addEventListener('click', (e) => handleIntensitySelection(parseInt(e.target.dataset.intensity))));
+        
+        // Listener para botones de IA en clases (ELIMINADO)
+        
+        document.getElementById('back-to-emotion-selection').addEventListener('click', () => switchView('emotionSelection'));
+
+        // NUEVOS Listeners para el buzón
+        openDesahogoBtn.addEventListener('click', () => switchView('desahogo'));
+        document.getElementById('back-from-desahogo').addEventListener('click', () => switchView('emotionSelection'));
+        sendDesahogoBtn.addEventListener('click', handleSendDesahogo);
+        
+        // Listener dinámico para botones "Marcar como leído"
+        desahogoMessagesContainer.addEventListener('click', e => {
+             if (e.target.classList.contains('mark-read-btn')) {
+                const docId = e.target.dataset.id;
+                handleMarkAsRead(docId, e.target);
+            }
+        });
+
+        // --- INICIALIZACIÓN ---
+        initClassSelection();
+        initEmotionSelection();
+        initAdminLogin();
+        switchView('classSelection');
+    });
+</script>
+</body>
+</html>
+
