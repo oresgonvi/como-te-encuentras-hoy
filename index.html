@@ -323,8 +323,14 @@
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         
         try {
-            const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-            const app = initializeApp(firebaseConfig);
+        const firebaseConfig = {
+          apiKey: "AIzaSyCGMPb6hnY-zm0b1zm940Sw_WPzi1-rZu4",
+          authDomain: "como-te-sientes-hoy-7c64f.firebaseapp.com",
+          projectId: "como-te-sientes-hoy-7c64f",
+          storageBucket: "como-te-sientes-hoy-7c64f.firebasestorage.app",
+          messagingSenderId: "128496271836",
+          appId: "1:128496271836:web:53473d6c123160573a8f19"
+        };            const app = initializeApp(firebaseConfig);
             db = getFirestore(app);
             auth = getAuth(app);
             setLogLevel('debug');
@@ -980,4 +986,5 @@
 </script>
 </body>
 </html>
+
 
