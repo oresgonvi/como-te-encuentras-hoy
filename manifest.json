@@ -1,7 +1,7 @@
 {
-  "name": "Bienestar Emocional - Madre Matilde",
-  "short_name": "Bienestar",
-  "description": "Aplicaci\u00f3n de seguimiento del bienestar emocional para el Colegio Madre Matilde",
+  "name": "Emociones - Madre Matilde",
+  "short_name": "Emociones",
+  "description": "Aplicaci\u00f3n de seguimiento del Emociones para el Colegio Madre Matilde",
   "start_url": "/como-te-encuentras-hoy/",
   "display": "standalone",
   "background_color": "#4a5568",
