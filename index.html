@@ -387,11 +387,25 @@
             { name: 'Aburrimiento', color: 'bg-gray-500', emoji: '😑', type: 'neutral' },
             { name: 'Envidia', color: 'bg-pink-500', emoji: '😒', type: 'negative' },
             { name: 'Vergüenza', color: 'bg-indigo-500', emoji: '😳', type: 'negative' }
+                        { name: 'Calma', color: 'bg-cyan-500', emoji: '🧘', type: 'positive' }
         ];
         
         const contexts_general = [
             { name: 'Clase / Tareas', icon: '📚', color: 'bg-blue-100 text-blue-800' },
             { name: 'Amigos / Compañeros', icon: '🧑‍🤝‍🧑', color: 'bg-green-100 text-green-800' },
+
+                    const esoExtraEmotions = [
+                        { name: 'Frustración', color: 'bg-red-800', emoji: '😤', type: 'negative' },
+                        { name: 'Orgullo', color: 'bg-yellow-600', emoji: '😌', type: 'positive' },
+                        { name: 'Decepción', color: 'bg-blue-800', emoji: '😞', type: 'negative' },
+                        { name: 'Inseguridad', color: 'bg-purple-400', emoji: '😰', type: 'negative' },
+                        { name: 'Distante', color: 'bg-slate-500', emoji: '😶', type: 'neutral' },
+                        { name: 'Rechazado', color: 'bg-indigo-800', emoji: '😔', type: 'negative' },
+                        { name: 'Amenazado', color: 'bg-purple-800', emoji: '😨', type: 'negative' },
+                        { name: 'Agresivo', color: 'bg-red-900', emoji: '😠', type: 'negative' },
+                        { name: 'Culpable', color: 'bg-gray-700', emoji: '😓', type: 'negative' },
+                        { name: 'Deprimido', color: 'bg-blue-900', emoji: '😢', type: 'negative' }
+                    ];
             { name: 'Familia / Casa', icon: '🏠', color: 'bg-purple-100 text-purple-800' },
             { name: 'Yo mismo/a', icon: '👤', color: 'bg-yellow-100 text-yellow-800' },
             { name: 'No lo sé', icon: '❓', color: 'bg-gray-100 text-gray-800' }
@@ -473,7 +487,13 @@
         const initEmotionSelection = () => {
             const emotionGrid = document.getElementById('emotion-grid');
             emotionGrid.innerHTML = '';
-            emotions.forEach(emotion => {
+
+                    // Determinar qué emociones mostrar según la clase
+                    let emotionsToRender = emotions;
+                    if (state.selectedClass && state.selectedClass.includes('E.S.O.')) {
+                                    emotionsToRender = [...emotions, ...esoExtraEmotions];
+                                }
+            emotionsToRender.forEach(emotion => {
                 const card = document.createElement('div');
                 card.className = `emotion-card ${emotion.color} text-white p-4 rounded-lg flex flex-col items-center justify-center aspect-square cursor-pointer relative`;
                 card.innerHTML = `<span class="text-5xl">${emotion.emoji}</span><span class="font-bold mt-2 text-sm md:text-base">${emotion.name}</span><button class="speaker-btn absolute top-2 right-2 bg-black/20 p-1 rounded-full hover:bg-black/40"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg></button>`;
@@ -519,7 +539,7 @@
         
         // NUEVA: Muestra/oculta el botón del buzón
         const updateDesahogoButtonVisibility = () => {
-            if (state.selectedClass && state.selectedClass.includes('E.S.O.')) {
+            if (state.selectedClass && (state.selectedClass.includes('E.S.O.') || state.selectedClass.includes('Primaria'))) {
                 openDesahogoBtn.classList.remove('hidden');
             } else {
                 openDesahogoBtn.classList.add('hidden');
@@ -992,6 +1012,7 @@
 </script>
 </body>
 </html>
+
 
 
 
